@@ -10,6 +10,7 @@ import { Company } from './enum/company.enum';
 import { RedisService } from 'src/redis/redis.service';
 import { OrderDto } from './dto/order.dto';
 import { ClientKafka } from '@nestjs/microservices';
+import { KafkaService } from 'src/kafka/kafka.service';
 
 @Injectable()
 export class StocksService {
@@ -18,7 +19,8 @@ export class StocksService {
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
     private readonly redisService: RedisService,
-    @Inject('KAFKA_SERVICE') private readonly kafkaClient: ClientKafka,
+    // @Inject('KAFKA_SERVICE') private readonly kafkaClient: ClientKafka,
+    private readonly kafkaService: KafkaService
   ) {}
 
   async getStock(company: Company) {
@@ -45,7 +47,8 @@ export class StocksService {
   }
 
   async performAction(action: OrderDto) {
-    await this.kafkaClient.emit('stock-trades', action);
+    // await this.kafkaClient.emit('stock-trades', action);
+    await this.kafkaService.produceMessage('input-topic', action);
 
     return { message: 'Action performed successfully', action };
   }
