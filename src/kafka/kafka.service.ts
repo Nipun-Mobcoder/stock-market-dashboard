@@ -1,16 +1,22 @@
 import {
+  Inject,
   Injectable,
   InternalServerErrorException,
   OnModuleInit,
 } from '@nestjs/common';
-import { kafka, producer, consumer } from './kafka.config';
+import { producer, consumer } from './kafka.config';
 import { KafkaMessage } from '@nestjs/microservices/external/kafka.interface';
-import { OrderDto } from 'src/modules/stocks/dto/order.dto';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
+import { ActionType } from './action.dto';
+import { Model } from 'mongoose';
+import { Stock } from 'src/modules/stocks/schemas/stocks.schemas';
+import { InjectModel } from '@nestjs/mongoose';
 
 @Injectable()
 export class KafkaService implements OnModuleInit {
+  constructor(@InjectModel(Stock.name) private readonly stockModule: Model<Stock>) {}
+
   async onModuleInit() {
     await this.connect();
     await this.consumeMessages();
@@ -21,11 +27,16 @@ export class KafkaService implements OnModuleInit {
     await consumer.connect();
   }
 
-  async produceMessage(topic: string, message: OrderDto) {
+  async produceMessage(topic: string, message: ActionType) {
     await producer.send({
       topic,
       messages: [{ value: JSON.stringify(message) }],
     });
+  }
+
+  async performAction(order: ActionType) {
+    const stockDetails = await this.stockModule.findOne({ stockName: order.symbol, user: order.id })
+    return stockDetails;
   }
 
   async consumeMessages() {
@@ -35,9 +46,9 @@ export class KafkaService implements OnModuleInit {
       eachMessage: async ({ message }: { message: KafkaMessage }) => {
         if (!message || !message.value)
           throw new InternalServerErrorException();
-        const orderData: OrderDto = JSON.parse(message.value.toString());
+        const orderData: ActionType = JSON.parse(message.value.toString());
 
-        const order = plainToInstance(OrderDto, orderData);
+        const order = plainToInstance(ActionType, orderData);
 
         const errors = await validate(order);
         if (errors.length > 0) {
@@ -46,16 +57,8 @@ export class KafkaService implements OnModuleInit {
         }
         console.log('Received message:', order);
 
-        const processedMessage = this.processMessage(order);
-
-        await this.produceMessage('output-topic', processedMessage);
+        await this.produceMessage('output-topic', order);
       },
     });
-  }
-
-  processMessage(order: OrderDto): OrderDto {
-    return {
-      ...order,
-    };
   }
 }

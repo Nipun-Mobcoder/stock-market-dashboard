@@ -10,7 +10,4 @@ export class OrderDto {
 
   @IsEnum(Action)
   type: Action;
-
-  @IsString()
-  userId: string;
 }

@@ -22,9 +22,9 @@ export class RedisService {
     }
   }
 
-  async set(key: string, value: unknown): Promise<void> {
+  async set(key: string, value: unknown, ttl?: string): Promise<void> {
     try {
-      const token = await this.cacheManager.set(key, value);
+      const token = await this.cacheManager.set(key, value, ttl);
       this.logger.log(`token is: ${token}`);
     } catch (error) {
       this.logger.error(`Failed to set key: ${key}`, error);
