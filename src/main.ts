@@ -9,6 +9,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.useGlobalInterceptors(new ResponseInterceptor());
   app.useGlobalFilters(new GlobalFilter());
+  app.enableCors();
   // app.connectMicroservice<MicroserviceOptions>({
   //   transport: Transport.KAFKA,
   //   options: {

@@ -31,16 +31,19 @@ export class StocksController {
 
   @Post('action')
   @HttpCode(HttpStatus.OK)
-  async action(@Req() request: Request,  @Body() order: OrderDto) {
+  async action(@Req() request: Request, @Body() order: OrderDto) {
     const user = request.user as { email: string; id: string };
     order.symbol = Company[order.symbol.toUpperCase() as keyof typeof Company];
     order.type = Action[order.type.toUpperCase() as keyof typeof Action];
     return await this.stocksService.performAction(order, user.id);
   }
 
-  @Get("fetch/:company")
-  async fetchUserStocks(@Req() request:Request, @Param('company') company: Company) {
-    const user = request.user as { email: string, id: string };
+  @Get('fetch/:company')
+  async fetchUserStocks(
+    @Req() request: Request,
+    @Param('company') company: Company,
+  ) {
+    const user = request.user as { email: string; id: string };
     company = Company[company.toUpperCase() as keyof typeof Company];
     return this.stocksService.getStock(company);
   }

@@ -22,7 +22,7 @@ export class StocksService {
     private readonly configService: ConfigService,
     private readonly redisService: RedisService,
     private readonly kafkaService: KafkaService,
-    @InjectModel(Stock.name) private readonly stockModel: Model<Stock>
+    @InjectModel(Stock.name) private readonly stockModel: Model<Stock>,
   ) {}
 
   async getStock(company: Company) {
@@ -50,7 +50,7 @@ export class StocksService {
 
   async performAction(action: OrderDto, id: string) {
     // await this.kafkaClient.emit('stock-trades', action);
-    await this.kafkaService.produceMessage('input-topic', {...action, id});
+    await this.kafkaService.produceMessage('input-topic', { ...action, id });
 
     return { message: 'Action performed successfully', action };
   }
@@ -75,11 +75,11 @@ export class StocksService {
         {
           $lookup: {
             from: 'users',
-            localField: "userId",
-            foreignField: "_id",
-            as: 'user'
-          }
-        }
+            localField: 'userId',
+            foreignField: '_id',
+            as: 'user',
+          },
+        },
       ]);
       console.log(lookupData);
       return response.data;

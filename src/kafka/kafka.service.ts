@@ -1,21 +1,23 @@
 import {
-  Inject,
   Injectable,
   InternalServerErrorException,
   OnModuleInit,
 } from '@nestjs/common';
-import { producer, consumer } from './kafka.config';
 import { KafkaMessage } from '@nestjs/microservices/external/kafka.interface';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import { ActionType } from './action.dto';
 import { Model } from 'mongoose';
-import { Stock } from 'src/modules/stocks/schemas/stocks.schemas';
 import { InjectModel } from '@nestjs/mongoose';
+
+import { producer, consumer } from './kafka.config';
+import { ActionType } from './action.dto';
+import { Stock } from 'src/modules/stocks/schemas/stocks.schemas';
 
 @Injectable()
 export class KafkaService implements OnModuleInit {
-  constructor(@InjectModel(Stock.name) private readonly stockModule: Model<Stock>) {}
+  constructor(
+    @InjectModel(Stock.name) private readonly stockModule: Model<Stock>,
+  ) {}
 
   async onModuleInit() {
     await this.connect();
@@ -35,7 +37,10 @@ export class KafkaService implements OnModuleInit {
   }
 
   async performAction(order: ActionType) {
-    const stockDetails = await this.stockModule.findOne({ stockName: order.symbol, user: order.id })
+    const stockDetails = await this.stockModule.findOne({
+      stockName: order.symbol,
+      user: order.id,
+    });
     return stockDetails;
   }
 

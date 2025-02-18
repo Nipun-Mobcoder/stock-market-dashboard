@@ -14,6 +14,7 @@ import { CreateUserDTO } from './dto/CreateUserDTO';
 import { User } from './schemas/users.schemas';
 import { LoginUserDTO } from './dto/LoginUserDTO';
 import { RedisService } from 'src/redis/redis.service';
+import { StripeService } from 'src/razorPay/stripe.service';
 
 @Injectable()
 export class UsersService {
@@ -24,6 +25,7 @@ export class UsersService {
     @InjectModel(User.name) private readonly userModel: Model<User>,
     private readonly jwtService: JwtService,
     private readonly redisService: RedisService,
+    private readonly stripeService: StripeService,
   ) {
     this.bcryptSalt = bcrypt.genSaltSync(10);
   }
@@ -75,6 +77,7 @@ export class UsersService {
         userName: userData.name,
         phoneNumber: userData.phoneNumber,
         address: userData.address,
+        walletAmount: userData.wallet
       };
 
       const token = await this.jwtService.signAsync({ id: userData.id, email });
@@ -92,6 +95,25 @@ export class UsersService {
       const userData = await this.userModel.findById(id);
       return userData;
     } catch (e) {
+      this.logger.error(e);
+      throw new InternalServerErrorException(e);
+    }
+  }
+
+  async addMoney(amount: number) {
+    try {
+      return this.stripeService.createPaymentIntent(amount);
+    } catch(e) {
+      this.logger.error(e);
+      throw new InternalServerErrorException(e);
+    }
+  }
+
+  async completePayment(amount: number, userId: string) {
+    try {
+      const userData = await this.userModel.findOneAndUpdate({ _id: userId }, { $inc: { wallet: amount } } , { new: true });
+      return userData;
+    } catch(e) {
       this.logger.error(e);
       throw new InternalServerErrorException(e);
     }

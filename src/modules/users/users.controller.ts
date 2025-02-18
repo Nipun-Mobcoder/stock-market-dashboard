@@ -39,4 +39,20 @@ export class UsersController {
     const { id } = user;
     return this.usersService.profile(id);
   }
+
+  @Post('addWallet')
+  @UseGuards(AuthenticationGuard)
+  @HttpCode(HttpStatus.OK)
+  async addMoneyWallet(@Body('amount') amount: number) {
+    return this.usersService.addMoney(amount);
+  }
+
+  @Post('completePayment')
+  @UseGuards(AuthenticationGuard)
+  @HttpCode(HttpStatus.OK)
+  async completePayment(@Req() request: Request, @Body('amount') amount: number) {
+    const user = request.user as { email: string; id: string };
+    const { id } = user;
+    return this.usersService.completePayment(amount, id);
+  }
 }
