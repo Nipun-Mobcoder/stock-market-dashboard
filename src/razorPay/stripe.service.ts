@@ -37,7 +37,9 @@ export class StripeService {
       return paymentIntent.client_secret;
     } catch (error) {
       this.logger.error(error);
-      throw new InternalServerErrorException('There was an error processing your payment. Please try again later.');
+      throw new InternalServerErrorException(
+        'There was an error processing your payment. Please try again later.',
+      );
     }
   }
 }

@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
+import { JwtModule } from '@nestjs/jwt';
 
 import { StocksModule } from './modules/stocks/stocks.module';
 import { RedisModule } from './redis/redis.module';
 import { KafkaModule } from './kafka/kafka.module';
 import { UsersModule } from './modules/users/users.module';
-import { JwtModule } from '@nestjs/jwt';
 import { StripeModule } from './razorPay/stripe.module';
 
 @Module({

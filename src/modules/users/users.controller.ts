@@ -43,16 +43,24 @@ export class UsersController {
   @Post('addWallet')
   @UseGuards(AuthenticationGuard)
   @HttpCode(HttpStatus.OK)
-  async addMoneyWallet(@Body('amount') amount: number) {
-    return this.usersService.addMoney(amount);
+  async addMoneyWallet(
+    @Req() request: Request,
+    @Body('amount') amount: number,
+  ) {
+    const user = request.user as { email: string; id: string };
+    const { id } = user;
+    return this.usersService.addMoney(amount, id);
   }
 
   @Post('completePayment')
   @UseGuards(AuthenticationGuard)
   @HttpCode(HttpStatus.OK)
-  async completePayment(@Req() request: Request, @Body('amount') amount: number) {
+  async completePayment(
+    @Req() request: Request,
+    @Body('paymentId') paymentId: string,
+  ) {
     const user = request.user as { email: string; id: string };
     const { id } = user;
-    return this.usersService.completePayment(amount, id);
+    return this.usersService.completePayment(paymentId, id);
   }
 }

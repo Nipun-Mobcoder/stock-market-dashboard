@@ -21,34 +21,29 @@ export class AuthenticationGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    try {
-      const request = context.switchToHttp().getRequest<Request>();
+    const request = context.switchToHttp().getRequest<Request>();
 
-      const authHead = request.header('Authorization');
-      if (!authHead || !authHead.startsWith('Bearer ')) {
-        throw new UnauthorizedException('Token is missing');
-      }
-
-      const token = authHead.split(' ')[1]?.trim();
-
-      if (!token) throw new UnauthorizedException('Token is missing');
-
-      const decoded = this.jwtService.decode(token);
-      console.log(decoded);
-
-      if (!decoded || !decoded.email || !decoded.id) {
-        throw new NotFoundException();
-      }
-
-      const data = await this.redisService.get(`token:${decoded.email}`);
-      if (!data || data !== token) {
-        throw new UnauthorizedException('Token has expired.');
-      }
-      request.user = decoded;
-    } catch (error) {
-      this.logger.error(error);
-      throw new InternalServerErrorException(error.message);
+    const authHead = request.header('Authorization');
+    if (!authHead || !authHead.startsWith('Bearer ')) {
+      throw new UnauthorizedException('Token is missing');
     }
+
+    const token = authHead.split(' ')[1]?.trim();
+
+    if (!token) throw new UnauthorizedException('Token is missing');
+
+    const decoded = this.jwtService.decode(token);
+    console.log(decoded);
+
+    if (!decoded || !decoded.email || !decoded.id) {
+      throw new NotFoundException();
+    }
+
+    const data = await this.redisService.get(`token:${decoded.email}`);
+    if (!data || data !== token) {
+      throw new UnauthorizedException('Token has expired.');
+    }
+    request.user = decoded;
 
     return true;
   }

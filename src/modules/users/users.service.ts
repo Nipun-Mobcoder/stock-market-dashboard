@@ -15,6 +15,7 @@ import { User } from './schemas/users.schemas';
 import { LoginUserDTO } from './dto/LoginUserDTO';
 import { RedisService } from 'src/redis/redis.service';
 import { StripeService } from 'src/razorPay/stripe.service';
+import { Payment } from './schemas/payments.schemas';
 
 @Injectable()
 export class UsersService {
@@ -23,6 +24,7 @@ export class UsersService {
 
   constructor(
     @InjectModel(User.name) private readonly userModel: Model<User>,
+    @InjectModel(Payment.name) private readonly paymentModel: Model<Payment>,
     private readonly jwtService: JwtService,
     private readonly redisService: RedisService,
     private readonly stripeService: StripeService,
@@ -31,15 +33,15 @@ export class UsersService {
   }
 
   async createUser(createUserDto: CreateUserDTO): Promise<User> {
-    try {
-      const { email, password } = createUserDto;
-      const userData = await this.userModel.findOne({ email });
+    const { email, password } = createUserDto;
+    const userData = await this.userModel.findOne({ email });
 
-      if (userData) {
-        throw new ConflictException(
-          `User with ${email} already exists please try with another email.`,
-        );
-      }
+    if (userData) {
+      throw new ConflictException(
+        `User with ${email} already exists please try with another email.`,
+      );
+    }
+    try {
       const hashPassword = await bcrypt.hash(password, this.bcryptSalt);
       const userDetails = await this.userModel.create({
         ...createUserDto,
@@ -58,26 +60,25 @@ export class UsersService {
   }
 
   async loginUser(loginUserDto: LoginUserDTO) {
+    const { email, password } = loginUserDto;
+
+    const userData = await this.userModel
+      .findOne({ email })
+      .select('+password');
+
+    console.log(userData);
+
+    if (!userData || !bcrypt.compareSync(password, userData.password)) {
+      throw new NotFoundException(`credentials incorrect for user ${email}`);
+    }
     try {
-      const { email, password } = loginUserDto;
-
-      const userData = await this.userModel
-        .findOne({ email })
-        .select('+password');
-
-      console.log(userData);
-
-      if (!userData || !bcrypt.compareSync(password, userData.password)) {
-        throw new NotFoundException(`credentials incorrect for user ${email}`);
-      }
-
       const user = {
         id: userData.id,
         email,
         userName: userData.name,
         phoneNumber: userData.phoneNumber,
         address: userData.address,
-        walletAmount: userData.wallet
+        walletAmount: userData.wallet,
       };
 
       const token = await this.jwtService.signAsync({ id: userData.id, email });
@@ -86,7 +87,7 @@ export class UsersService {
       return { user, token };
     } catch (e) {
       this.logger.error(e);
-      throw new InternalServerErrorException(e);
+      throw new InternalServerErrorException();
     }
   }
 
@@ -100,20 +101,45 @@ export class UsersService {
     }
   }
 
-  async addMoney(amount: number) {
+  async addMoney(amount: number, userId: string) {
     try {
-      return this.stripeService.createPaymentIntent(amount);
-    } catch(e) {
+      const user = await this.userModel.findById(userId);
+      if (!user) {
+        throw new NotFoundException('User not found.');
+      }
+      const paymentData = await this.paymentModel.create({
+        amount: amount * 100,
+        email: user.email,
+        paymentStatus: 'progress',
+        paymentMethod: 'Stripe',
+      });
+      const stripeId = await this.stripeService.createPaymentIntent(
+        amount * 100,
+      );
+      return {
+        stripeId,
+        id: paymentData._id.toString(),
+      };
+    } catch (e) {
       this.logger.error(e);
       throw new InternalServerErrorException(e);
     }
   }
 
-  async completePayment(amount: number, userId: string) {
+  async completePayment(paymentId: string, userId: string) {
     try {
-      const userData = await this.userModel.findOneAndUpdate({ _id: userId }, { $inc: { wallet: amount } } , { new: true });
-      return userData;
-    } catch(e) {
+      const paymentInfo = await this.paymentModel.findOneAndUpdate(
+        { _id: paymentId },
+        { paymentStatus: 'success' },
+        { new: true },
+      );
+      const userData = await this.userModel.findOneAndUpdate(
+        { _id: userId },
+        { $inc: { wallet: paymentInfo?.amount } },
+        { new: true },
+      );
+      return { wallet: userData?.wallet, paymentInfo };
+    } catch (e) {
       this.logger.error(e);
       throw new InternalServerErrorException(e);
     }
